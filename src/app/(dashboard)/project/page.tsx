@@ -35,14 +35,23 @@ function ProjectsPage() {
 
       const {data} = result || {}
 
+      console.log(data, "projectList");
+
       setProjects(data);
 
     } catch(err) {
-        console.error("Error Loading Projects", err)
+        console.error("Error Loading Projects", err);
+        toast.error("Failed to create project")
+    } finally {
+      setLoading(false)
     }
   };
 
-
+  useEffect(() =>{
+    if(userId) {
+      loadProjects();
+    }
+  }, [userId]);
 
   const handleCreateProject = async (name: string, description: string) => {}
 
@@ -59,6 +68,8 @@ function ProjectsPage() {
   const handleCloseModal = () => {
     setShowCreateModal(false);
   };
+
+
 
   return (
     <div>
