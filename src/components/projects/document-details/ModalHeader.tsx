@@ -1,5 +1,5 @@
 import { X, FileText, Globe } from "lucide-react";
-import { ProjectDocument } from "@/lib/types";
+import { ProjectDocument } from "@/src//lib/types";
 
 interface ModalHeaderProps {
   document: ProjectDocument;

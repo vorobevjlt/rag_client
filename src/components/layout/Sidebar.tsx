@@ -12,11 +12,11 @@ export function Sidebar() {
   const pathname = usePathname();
 
   const handleProjectsClick = () => {
-    router.push("/projects");
+    router.push("/project");
   };
 
   const handleNewProject = () => {
-    router.push("/projects");
+    router.push("/project");
   };
 
   return (
@@ -62,7 +62,7 @@ export function Sidebar() {
             <button
               onClick={handleProjectsClick}
               className={`w-full flex items-center gap-3 p-2 text-sm rounded-md transition-colors ${
-                pathname === "/projects"
+                pathname === "/project"
                   ? "bg-[#252525] text-gray-200 border border-gray-700"
                   : "text-gray-400 hover:bg-[#252525] hover:text-gray-200"
               }`}

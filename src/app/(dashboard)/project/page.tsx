@@ -10,10 +10,18 @@ import { LoadingSpinner } from "@/src/components/ui/LoadingSpinner";
 import { apiClient } from "@/src/lib/api";
 import toast from "react-hot-toast"
 
-function ProjectsPage() {
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  clerk_id: string;
+}
 
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(false);
+function ProjectMainPage() {
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const[searchQuery, setSearchQuery] = useState("");
@@ -29,36 +37,73 @@ function ProjectsPage() {
     try {
       setLoading(true);
 
-      const token = await getToken()
+      const token = await getToken();
 
-      const result = await apiClient.get("/api/projects", token)
+      const result = await apiClient.get("/api/projects", token);
 
-      const {data} = result || {}
+      const { data } = result || {};
 
-      console.log(data, "projectList");
+      console.log(data, "projectList")
 
       setProjects(data);
-
-    } catch(err) {
-        console.error("Error Loading Projects", err);
-        toast.error("Failed to create project")
+    } catch (err) {
+      console.error("Error Loading Projects", err);
+      toast.error("Failed to create project");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
-  useEffect(() =>{
-    if(userId) {
-      loadProjects();
+  const handleCreateProject = async (name: string, description: string) => {
+    try {
+      setError(null);
+      setIsCreating(true);
+
+      const token = await getToken();
+
+      const result = await apiClient.post(
+        "/api/projects",
+        {
+          name,
+          description,
+        },
+        token
+      );
+
+      const savedProject = result?.data || {};
+      setProjects((prev) => [savedProject, ...prev]);
+
+      setShowCreateModal(false);
+      toast.success("Project created successfully!");
+    } catch (err) {
+      toast.error("Failed to create project");
+      console.error("Failed to create project", err);
+    } finally {
+      setIsCreating(false);
     }
-  }, [userId]);
 
-  const handleCreateProject = async (name: string, description: string) => {}
+  };
 
-  const handleDeleteProject = async (projectId:string) => {}
+  const handleDeleteProject = async (projectId:string) => {
+    try{
+      setError(null);
+      const token = await getToken();
+
+      await apiClient.delete(
+        `/api/projects/${projectId}`,
+        token
+      );
+
+      setProjects((prev) => prev.filter((project) => project.id !== projectId));
+      toast.success("Project deleted successfully!");
+    } catch (err) {
+      toast.error("Failed to delete project");
+      console.error("Failed to create project", err);
+    }
+  }
 
   const handlePojectClick = (projectId: string) => {
-    router.push('/projects/${projectd}');
+    router.push(`/projects/${projectId}`);
   };
 
   const handleOpenModal = () => {
@@ -69,7 +114,21 @@ function ProjectsPage() {
     setShowCreateModal(false);
   };
 
+  useEffect(() => {
+    if (userId) {
+      loadProjects();
+    }
+  }, [userId])
+  
+  const filterProjects = projects.filter(
+    (project) => 
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
+  if (loading) {
+    return <LoadingSpinner message="Loading...." />
+  }
 
   return (
     <div>
@@ -95,5 +154,5 @@ function ProjectsPage() {
     </div>
   );
 }
-
-export default ProjectsPage;
+// sdas
+export default ProjectMainPage;

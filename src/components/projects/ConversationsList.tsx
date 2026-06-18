@@ -1,5 +1,5 @@
 import { MessageSquare, Plus, AlertCircle, Trash2 } from "lucide-react";
-import { Project, Chat } from "@/lib/types";
+import { Project, Chat } from "@/src/lib/types";
 
 interface ConversationsListProps {
   project: Project;
