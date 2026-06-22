@@ -103,7 +103,7 @@ function ProjectMainPage() {
   }
 
   const handlePojectClick = (projectId: string) => {
-    router.push(`/projects/${projectId}`);
+    router.push(`/project/${projectId}`);
   };
 
   const handleOpenModal = () => {

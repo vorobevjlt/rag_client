@@ -1,19 +1,39 @@
 "use client";
 
-import React, { use, useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { ConversationsList } from '@/src/components/projects/ConversationsList';
 import { KnowledgeBaseSidebar } from '@/src/components/projects/KnowledgeBaseSidebar';
 import { FileDetailsModal } from '@/src/components/projects/FileDetailsModal';
+import { LoadingSpinner } from "@/src/components/ui/LoadingSpinner";
+import { NotFound } from "@/src/components/ui/NotFound";
+import { useAuth } from "@clerk/nextjs"
+import { apiClient } from '@/src/lib/api';
+import toast from "react-hot-toast"
+import { useParams } from "next/navigation";
+import { Project, Chat, ProjectDocument, ProjectSettings } from "@/src/lib/types";
 
-interface ProjectDetailsPageProps {
-  params: Promise <{
-    projectId: string;
-  }>;
+interface ProjectData {
+  project: Project | null;
+  chats: Chat[];
+  documents: ProjectDocument[];
+  settings: ProjectSettings | null;
 }
 
-function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
-  const { projectId } = use(params);
-  
+function ProjectDetailsPage() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const { getToken, userId } = useAuth();
+  const [ data, setData ] = useState<ProjectData>({
+    project: null,
+    chats: [],
+    documents: [],
+    settings: null
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+
   const [activateTab, setActivateTab] = useState<"documents" | "settings">(
     "documents"
   );
@@ -22,64 +42,40 @@ function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
     null
   );
 
-  //Mock data for static UI
-  const mockProject = {
-    id: projectId,
-    name: "Research Analysis Project",
-    description: "AI and machine learning research papers",
-    created_at: new Date().toISOString(),
-    clerk_id: "user_123",
-  };
+  useEffect(() => {
+    const loadAllData = async () => {
+      if (!userId) return;
 
-  const mockChats = [
-    {
-      id: "chat_1",
-      project_id: projectId,
-      title: "Chat #1234",
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      clerk_id: "user_123",
-    },
-    {
-      id: "chat_2",
-      project_id: projectId,
-      title: "Chat #5678",
-      created_at: new Date(Date.now() - 172800000).toISOString(),
-      clerk_id: "user_123",
-    },
-  ];
+      try {
+        setLoading(true);
+        setError(null);
 
-  const mockDocuments = [
-    {
-      id: "doc_1",
-      project_id: projectId,
-      filename: "research_paper.pdf",
-      s3_key: "projects/123/documents/research_paper.pdf",
-      file_size: 2457600,
-      file_type: "application/pdf",
-      processing_status: "completed",
-      clerk_id: "user_123",
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      source_type: "file",
-      processing_details: {},
-    },
-  ];
+        const token = await getToken();
 
-  const mockSettings = {
-    id: "settings_1",
-    project_id: projectId,
-    embedding_model: "text-embedding-3-large",
-    rag_strategy: "basic",
-    agent_type: "agentic",
-    chunks_per_search: 10,
-    final_context_size: 5,
-    similarity_threshold: 0.3,
-    number_of_queries: 5,
-    reranking_enabled: true,
-    reranking_model: "rerank-english-v3.0",
-    vector_weight: 0.7,
-    keyword_weight: 0.3,
-    created_at: new Date().toISOString(),
-  };
+        const [projectRes, chatsRes, documentsRes, settingsRes] =
+          await Promise.all([
+            apiClient.get(`/api/projects/${projectId}`, token),
+            apiClient.get(`/api/projects/${projectId}/chats`, token),
+            apiClient.get(`/api/projects/${projectId}/files`, token),
+            apiClient.get(`/api/projects/${projectId}/settings`, token),
+          ]);
+
+        setData({
+          project: projectRes.data,
+          chats: chatsRes.data,
+          documents: documentsRes.data,
+          settings: settingsRes.data,
+        });
+      } catch (err) {
+        setError("Failed to fetch data");
+        toast.error("Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllData();
+  }, [userId, projectId, getToken]);
 
   //   Chat-related methods
   const handleCreateNewChat = async () => {
@@ -122,10 +118,52 @@ function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
     console.log("Make API call to publish settings");
   };
 
+  if (loading) {
+    return <LoadingSpinner message="Loading project..." />;
+  }
 
-  return (
-    <div>This ProjectPage</div>
-  )
+  if (!data.project) {
+    return <NotFound message="Project not found" />;
+  }
+
+  const selectedDocument = selectDocumentId
+    ? data.documents.find((doc) => doc.id == selectDocumentId)
+    : null;
+  return  (
+  <div>
+    <div className='flex h-screen bg-[#0d1117] p-4'>
+      <ConversationsList 
+        project={data.project}
+        conversations={data.chats}
+        error={error}
+        loading={isCreatingChat}
+        onCreateNewChat={handleCreateNewChat}
+        onChatClick={handleChatClick}
+        onDeleteChat={handleDeleteChat} 
+        />
+      
+        <KnowledgeBaseSidebar 
+          activeTab={activateTab}
+          onSetActiveTab={setActivateTab}
+          projectDocuments={data.documents}
+          onDocumentUpload={handleDocumentUpload}
+          onDocumentDelete={handleDocumentDelete}
+          onOpenDocument={handleOpenDocument}
+          onUrlAdd={handleUrlAdd}
+          projectSettings={data.settings}
+          settingsError={null}
+          settingsLoading={false}
+          onUpdateSettings={handleDraftSettings}
+          onApplySettings={handlePublishSettings} 
+          />
+      </div>      
+      {selectedDocument && (
+        <FileDetailsModal
+          document={selectedDocument}
+          onClose={() => setSelectedDocumentId(null)}
+        />
+      )}
+  </div>);
 }
 
 export default ProjectDetailsPage;

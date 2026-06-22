@@ -73,7 +73,7 @@ export function ConversationsList({
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-200">
-                Conversations
+                Real Conversations
               </h2>
               <span className="text-xs text-gray-400 bg-[#252525] px-2 py-1 rounded">
                 {conversations.length}
