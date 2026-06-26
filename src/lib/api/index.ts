@@ -1,6 +1,4 @@
 // Basic API client function to provide authentication
-const CLERK_API_BASE_URL = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export const apiClient = {
@@ -22,7 +20,7 @@ export const apiClient = {
         return response.json();
     },
 
-    post: async (endpoint: string, data: any ,token?: string | null) => {
+    post: async (endpoint: string, data: unknown, token?: string | null) => {
         const headers: HeadersInit = {
             "Content-Type": "application/json",
         };
@@ -33,6 +31,28 @@ export const apiClient = {
 
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: "POST",
+            headers,
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        return response.json();
+    },
+
+    put: async (endpoint: string, data: unknown, token?: string | null) => {
+        const headers: HeadersInit = {
+            "Content-Type": "application/json",
+        };
+
+        if(token) {
+            headers["Authorization"] = `Bearer ${token}`
+        }
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: "PUT",
             headers,
             body: JSON.stringify(data),
         });
@@ -61,5 +81,22 @@ export const apiClient = {
         }
 
         return response.json();
+    },
+
+    uploadToS3: async (url: string, file: File) => {
+        const response = await fetch(url, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        return response;
+
     }
+
+    
 };

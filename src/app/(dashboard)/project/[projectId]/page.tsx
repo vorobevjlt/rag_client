@@ -79,11 +79,58 @@ function ProjectDetailsPage() {
 
   //   Chat-related methods
   const handleCreateNewChat = async () => {
-    console.log("Create new Chat");
+    if (!userId) return;
+
+    try {
+      setIsCreatingChat(true);
+
+      const token = await getToken();
+
+      const chatNumber = Date.now() % 10000;
+
+      const result = await apiClient.post(
+        "/api/chats",
+        {
+          title: `Chat #${chatNumber}`,
+          project_id: projectId,
+        },
+        token
+      );
+
+      const savedChat = result.data;
+
+      // Update local state
+      setData((prev) => ({
+        ...prev,
+        chats: [savedChat, ...prev.chats],
+      }));
+
+      toast.success("Chat Created successfully");
+    } catch (err) {
+      toast.error("Failed to create chat");
+    } finally {
+      setIsCreatingChat(false);
+    }
   };
 
   const handleDeleteChat = async (chatId: string) => {
-    console.log("Chat Deleted");
+    if (!userId) return;
+
+    try {
+      const token = await getToken();
+
+      await apiClient.delete(`/api/chats/${chatId}`, token);
+
+      // Update local state
+      setData((prev) => ({
+        ...prev,
+        chats: prev.chats.filter((chat) => chat.id !== chatId),
+      }));
+
+      toast.success("Chat deleted successfully");
+    } catch (err) {
+      toast.error("Failed to delete chat");
+    }
   };
 
   const handleChatClick = (chatId: string) => {
@@ -92,7 +139,51 @@ function ProjectDetailsPage() {
 
   //   Document-related methods
   const handleDocumentUpload = async (files: File[]) => {
-    console.log("Upload files", files);
+    if (!userId) return;
+
+    const token = await getToken();
+    const uploadedDocuments: ProjectDocument[] = [];
+
+    const uploadPromises = files.map(async (file) => {
+      try {
+        const uploadData = await apiClient.post(
+          `/api/projects/${projectId}/files/upload-url`,
+          {
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+          },
+          token
+        );
+
+        const { upload_url, s3_key } = uploadData.data;
+
+        await apiClient.uploadToS3(upload_url, file);
+
+        const updatedDocument = await apiClient.post(
+          `/api/projects/${projectId}/files/confirm`,
+          {
+            s3_key,
+          },
+          token
+        );
+
+        uploadedDocuments.push(updatedDocument.data);
+      } catch (err) {
+        toast.error(`Failed to upload ${file.name}`)
+      }
+    });
+
+    await Promise.allSettled(uploadPromises)
+
+    if (uploadedDocuments.length > 0) {
+      setData((prev) => ({
+        ...prev,
+        documents: [...uploadedDocuments, ...prev.documents]
+      }));
+
+      toast.success(`${uploadedDocuments.length} file(s) uploaded`);
+    }
   };
 
   const handleDocumentDelete = async (documentId: string) => {
@@ -111,11 +202,47 @@ function ProjectDetailsPage() {
   // Project settings
 
   const handleDraftSettings = (updates: any) => {
-    console.log("Update local state with draft settings", updates);
+    setData((prev) => {
+      // If no settings exist yet, we can't update them
+      if (!prev.settings) {
+        console.warn("Cannot update settings: not loaded yet");
+        return prev;
+      }
+
+      // Merge the updates into existing settings
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          ...updates,
+        },
+      };
+    });
   };
 
   const handlePublishSettings = async () => {
-    console.log("Make API call to publish settings");
+    if (!userId || !data.settings) {
+      toast.error("Cannot save settings");
+    }
+
+    try {
+      const token = await getToken();
+
+      const result = await apiClient.put(
+        `/api/projects/${projectId}/settings`,
+        data.settings,
+        token
+      );
+
+      setData((prev) => ({
+        ...prev,
+        settings: result.data,
+      }));
+
+      toast.success("Settings saved successfully!");
+    } catch (err) {
+      toast.error("Failed to save settings!");
+    }
   };
 
   if (loading) {

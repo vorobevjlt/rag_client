@@ -9,14 +9,8 @@ import { CreateProjectModal } from "@/src/components/projects/CreateProjectModal
 import { LoadingSpinner } from "@/src/components/ui/LoadingSpinner";
 import { apiClient } from "@/src/lib/api";
 import toast from "react-hot-toast"
+import { Project } from "@/src/lib/types";
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  clerk_id: string;
-}
 
 function ProjectMainPage() {
 
@@ -154,5 +148,5 @@ function ProjectMainPage() {
     </div>
   );
 }
-// sdas
+
 export default ProjectMainPage;
