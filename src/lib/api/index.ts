@@ -89,14 +89,9 @@ export const apiClient = {
             body: file,
             headers: { "Content-Type": file.type || "application/octet-stream" },
         });
-
         if (!response.ok) {
             throw new Error(`API Error: ${response.status}`);
         }
-
         return response;
-
     }
-
-    
 };
