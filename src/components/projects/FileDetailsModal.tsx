@@ -74,7 +74,8 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
     const currentPos = PIPELINE_STEPS.findIndex(
       (step) => step.id === currentStatus
     );
-    const stepPos = PIPELINE_STEPS.findIndex((step) => step.id === stepId);
+    const stepPos = PIPELINE_STEPS.findIndex(
+      (step) => step.id === stepId);
 
     if (stepPos < currentPos) return "completed";
     if (stepPos === currentPos) return "processing";
