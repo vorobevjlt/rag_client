@@ -9,7 +9,7 @@ import { NotFound } from "@/src/components/ui/NotFound";
 import { useAuth } from "@clerk/nextjs"
 import { apiClient } from '@/src/lib/api';
 import toast from "react-hot-toast"
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Project, Chat, ProjectDocument, ProjectSettings } from "@/src/lib/types";
 
 interface ProjectData {
@@ -21,6 +21,7 @@ interface ProjectData {
 
 function ProjectDetailsPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const router = useRouter();
   const { getToken, userId } = useAuth();
   const [ data, setData ] = useState<ProjectData>({
     project: null,
@@ -73,17 +74,44 @@ function ProjectDetailsPage() {
     loadAllData();
   }, [userId, projectId, getToken]);
 
-// ONLY LOG
-// ==========
+  useEffect(() => {
+    const hasProcessingDocuments = data.documents.some(
+      (doc) =>
+        doc.processing_status &&
+        !["completed", "failed"].includes(doc.processing_status)
+    );
+
+    if (!hasProcessingDocuments) {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const token = await getToken();
+        const documentsRes = await apiClient.get(
+          `/api/projects/${projectId}/files`,
+          token
+        );
+
+        setData((prev) => ({
+          ...prev,
+          documents: documentsRes.data,
+        }));
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [data.documents, projectId, getToken]);
+
   const handleChatClick = (chatId: string) => {
-    console.log("Navigate to chat:", chatId);
+    router.push(`/project/${projectId}/chats/${chatId}`);
   };
 
   const handleOpenDocument = (documentId: string) => {
-    console.log("Open document", documentId);
     setSelectedDocumentId(documentId);
-  };  
-// ==========
+  };
 
   const handleDocumentDelete = async (documentId: string) => {
     if (!userId) return;
@@ -236,7 +264,6 @@ function ProjectDetailsPage() {
         console.warn("Cannot update settings: not loaded yet");
         return prev;
       }
-
       // Merge the updates into existing settings
       return {
         ...prev,

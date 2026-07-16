@@ -8,8 +8,9 @@ import { ProjectsGrid } from "@/src/components/projects/ProjectsGrid";
 import { CreateProjectModal } from "@/src/components/projects/CreateProjectModal";
 import { LoadingSpinner } from "@/src/components/ui/LoadingSpinner";
 import { apiClient } from "@/src/lib/api";
-import toast from "react-hot-toast"
 import { Project } from "@/src/lib/types";
+import toast from "react-hot-toast"
+
 
 
 function ProjectMainPage() {
@@ -69,7 +70,7 @@ function ProjectMainPage() {
 
       setShowCreateModal(false);
       toast.success("Project created successfully!");
-    } catch (err) {
+    } catch (err) {  
       toast.error("Failed to create project");
       console.error("Failed to create project", err);
     } finally {
@@ -92,7 +93,7 @@ function ProjectMainPage() {
       toast.success("Project deleted successfully!");
     } catch (err) {
       toast.error("Failed to delete project");
-      console.error("Failed to create project", err);
+      console.error("Failed to delete project", err);
     }
   }
 
