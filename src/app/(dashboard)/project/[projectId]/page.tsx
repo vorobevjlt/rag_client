@@ -5,6 +5,7 @@ import { ConversationsList } from '@/src/components/projects/ConversationsList';
 import { KnowledgeBaseSidebar } from '@/src/components/projects/KnowledgeBaseSidebar';
 import { FileDetailsModal } from '@/src/components/projects/FileDetailsModal';
 import { LoadingSpinner } from "@/src/components/ui/LoadingSpinner";
+import { MessageFeedbackModal } from '@/src/components/chat/MessageFeedbackModel';
 import { NotFound } from "@/src/components/ui/NotFound";
 import { useAuth } from "@clerk/nextjs"
 import { apiClient } from '@/src/lib/api';
@@ -153,7 +154,9 @@ function ProjectDetailsPage() {
       }));
       toast.success("Website added successfully!");
     } catch (err) {
-      toast.error("Failed to add website");
+      const message = err instanceof Error ? err.message : "Failed to add website";
+      toast.error(message);
+      throw err;
     }
   };
 
@@ -177,7 +180,7 @@ function ProjectDetailsPage() {
       );
 
       const savedChat = result.data;
-
+      // router.push(`/project/${projectId}/chats/${savedChat.id}`);
       // Update local state
       setData((prev) => ({
         ...prev,

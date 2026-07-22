@@ -1,6 +1,23 @@
 // Basic API client function to provide authentication
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
+const throwApiError = async (response: Response): Promise<never> => {
+    let message = `API Error: ${response.status}`;
+
+    try {
+        const body = await response.json();
+        if (typeof body?.detail === "string") {
+            message = body.detail;
+        } else if (typeof body?.message === "string") {
+            message = body.message;
+        }
+    } catch {
+        // Keep the status-based fallback when the response has no JSON body.
+    }
+
+    throw new Error(message);
+};
+
 export const apiClient = {
     get: async (endpoint: string, token?: string | null) => {
         const headers: HeadersInit = {} 
@@ -14,7 +31,7 @@ export const apiClient = {
         });
 
         if(!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            return throwApiError(response);
         }
 
         return response.json();
@@ -36,7 +53,7 @@ export const apiClient = {
         });
 
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            return throwApiError(response);
         }
 
         return response.json();
@@ -58,7 +75,7 @@ export const apiClient = {
         });
 
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            return throwApiError(response);
         }
 
         return response.json();
@@ -77,7 +94,7 @@ export const apiClient = {
         });
 
         if(!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            return throwApiError(response);
         }
 
         return response.json();

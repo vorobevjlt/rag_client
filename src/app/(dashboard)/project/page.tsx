@@ -38,12 +38,7 @@ function ProjectMainPage() {
 
       const { data } = result || {};
 
-      console.log(data, "projectList")
-
       setProjects(data);
-    } catch (err) {
-      console.error("Error Loading Projects", err);
-      toast.error("Failed to create project");
     } finally {
       setLoading(false);
     }
@@ -70,8 +65,8 @@ function ProjectMainPage() {
 
       setShowCreateModal(false);
       toast.success("Project created successfully!");
-    } catch (err) {  
-      toast.error("Failed to create project");
+    } catch (err) {
+      toast.error("Create project error");
       console.error("Failed to create project", err);
     } finally {
       setIsCreating(false);
@@ -110,13 +105,14 @@ function ProjectMainPage() {
   };
 
   useEffect(() => {
+    toast.success(`Dont have any project ${userId}`)
     if (userId) {
       loadProjects();
     }
   }, [userId])
-  
+
   const filterProjects = projects.filter(
-    (project) => 
+    (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -139,7 +135,7 @@ function ProjectMainPage() {
         onCreateProject={handleOpenModal}
         onDeleteProject={handleDeleteProject}
       />
-      
+
       <CreateProjectModal
         isOpen={showCreateModal}
         onClose={handleCloseModal}

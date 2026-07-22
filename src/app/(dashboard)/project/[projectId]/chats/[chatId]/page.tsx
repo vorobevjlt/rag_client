@@ -35,7 +35,6 @@ export default function ProjectChatPage({ params }: ProjectChatPageProps) {
 
   const { getToken, userId } = useAuth();
 
-  // Send message function
   const handleSendMessage = async (content: string) => {
     try {
       setSendMessageError(null);
@@ -65,13 +64,15 @@ export default function ProjectChatPage({ params }: ProjectChatPageProps) {
       }));
 
       toast.success("Message sent");
-    } catch (err) {
-      setSendMessageError("Failed to send message");
-      toast.error("Failed to send message");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to send message";
+      console.error("handleSendMessage failed:", error);
+      setSendMessageError(message);
+      toast.error(message);
     } finally {
       setIsMessageSending(false);
     }
-  };
+  }
 
   const handleFeedbackOpen = (messageId: string, type: "like" | "dislike") => {
     setFeedbackModal({ messageId, type });
@@ -119,7 +120,7 @@ export default function ProjectChatPage({ params }: ProjectChatPageProps) {
 
         setCurrentChatData(chatData);
       } catch (err) {
-        toast.error("Failed to load chat. Please try again.");
+        toast.error("Failed to load chat.");
       } finally {
         setIsLoadingChatData(false);
       }

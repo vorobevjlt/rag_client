@@ -273,7 +273,6 @@ export function KnowledgeBaseSidebar({
       setUrlInput("");
     } catch (error) {
       console.error("Failed to add URL:", error);
-      alert("Failed to add website. Please try again.");
     } finally {
       setIsAddingUrl(false);
     }
