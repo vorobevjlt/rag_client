@@ -11,10 +11,7 @@ import { apiClient } from "@/src/lib/api";
 import { Project } from "@/src/lib/types";
 import toast from "react-hot-toast"
 
-
-
 function ProjectMainPage() {
-
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -105,7 +102,6 @@ function ProjectMainPage() {
   };
 
   useEffect(() => {
-    toast.success(`Dont have any project ${userId}`)
     if (userId) {
       loadProjects();
     }

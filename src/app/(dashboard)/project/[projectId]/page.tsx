@@ -128,8 +128,10 @@ function ProjectDetailsPage() {
   }));
 
   toast.success("Document deleted")
-} catch (arr) {
-  toast.error("Document delete failed")
+} catch (error) {
+  const message =
+    error instanceof Error ? error.message : "Document delete failed";
+  toast.error(message)
 }
   };
 
@@ -226,7 +228,7 @@ function ProjectDetailsPage() {
         const uploadData = await apiClient.post(
           `/api/projects/${projectId}/files/upload-url`,
           {
-            file_name: file.name,
+            filename: file.name,
             file_size: file.size,
             file_type: file.type,
           },
@@ -244,7 +246,8 @@ function ProjectDetailsPage() {
         
         uploadedDocuments.push(updatedDocument.data);
       } catch (err) {
-        toast.error(`Failed to upload ${file.name}`)
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast.error(`Failed to upload ${file.name}: ${message}`);
       }
     });
 

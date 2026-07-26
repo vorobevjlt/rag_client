@@ -8,6 +8,11 @@ const throwApiError = async (response: Response): Promise<never> => {
         const body = await response.json();
         if (typeof body?.detail === "string") {
             message = body.detail;
+        } else if (Array.isArray(body?.detail)) {
+            message = body.detail
+                .map((item: { msg?: string }) => item?.msg)
+                .filter(Boolean)
+                .join("; ") || message;
         } else if (typeof body?.message === "string") {
             message = body.message;
         }
