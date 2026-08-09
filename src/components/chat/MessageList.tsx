@@ -24,6 +24,18 @@ interface MessageListProps {
   onFeedback?: (messageId: string, type: "like" | "dislike") => void;
 }
 
+function deduplicateCitations(citations: Message["citations"] = []) {
+  const seen = new Set<string>();
+
+  return citations.filter((citation) => {
+    const key = `${citation.filename}\u0000${citation.page}`;
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
 export function MessageList({
   messages = [],
   isLoading,
@@ -54,70 +66,72 @@ export function MessageList({
               Start a conversation
             </h3>
             <p className="text-gray-400 leading-relaxed">
-              Ask me anything about your documents and I'll help you find the
+              Ask me anything about your documents and I&apos;ll help you find the
               answers.
             </p>
           </div>
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8">
           <div className="space-y-8">
-            {messages.map((message) => (
-              <div key={message.id} className="group">
-                <MessageItem message={message} onFeedback={onFeedback} />
+            {messages.map((message) => {
+              const citations = deduplicateCitations(message.citations);
 
-                {/* Citations UI */}
-                {message.role === "assistant" &&
-                  message.citations &&
-                  message.citations.length > 0 && (
-                    <div className="mt-6 ml-0">
-                      <div className="bg-[#202020] border border-gray-800 rounded-lg p-4">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-5 h-5 bg-[#252525] border border-gray-700 rounded-md flex items-center justify-center">
-                            <FileText size={12} className="text-gray-400" />
+              return (
+                <div key={message.id} className="group">
+                  <MessageItem message={message} onFeedback={onFeedback} />
+
+                  {/* Citations UI */}
+                  {message.role === "assistant" && citations.length > 0 && (
+                      <div className="mt-6 ml-0">
+                        <div className="bg-[#202020] border border-gray-800 rounded-lg p-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-5 h-5 bg-[#252525] border border-gray-700 rounded-md flex items-center justify-center">
+                              <FileText size={12} className="text-gray-400" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-300">
+                              Sources ({citations.length})
+                            </span>
                           </div>
-                          <span className="text-sm font-medium text-gray-300">
-                            Sources ({message.citations.length})
-                          </span>
-                        </div>
 
-                        <div className="grid gap-2">
-                          {message.citations.map((citation, citationIndex) => (
-                            <div
-                              key={citationIndex}
-                              className="flex items-center gap-3 bg-[#252525] hover:bg-[#2a2a2a] rounded-lg px-3 py-2 border border-gray-700 hover:border-gray-600 transition-colors"
-                            >
-                              {/* Document Icon */}
-                              <div className="flex-shrink-0 w-7 h-7 bg-[#2a2a2a] border border-gray-600 rounded-md flex items-center justify-center">
-                                <FileText size={12} className="text-gray-400" />
-                              </div>
+                          <div className="grid gap-2">
+                            {citations.map((citation) => (
+                              <div
+                                key={`${citation.filename}-${citation.page}`}
+                                className="flex items-center gap-3 bg-[#252525] hover:bg-[#2a2a2a] rounded-lg px-3 py-2 border border-gray-700 hover:border-gray-600 transition-colors"
+                              >
+                                {/* Document Icon */}
+                                <div className="flex-shrink-0 w-7 h-7 bg-[#2a2a2a] border border-gray-600 rounded-md flex items-center justify-center">
+                                  <FileText size={12} className="text-gray-400" />
+                                </div>
 
-                              {/* Citation Info */}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-200 truncate">
-                                  {citation.filename}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  Page {citation.page}
-                                </p>
-                              </div>
+                                {/* Citation Info */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-200 truncate">
+                                    {citation.filename}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    Page {citation.page}
+                                  </p>
+                                </div>
 
-                              {/* Page Number Badge */}
-                              <div className="flex-shrink-0">
-                                <div className="w-6 h-6 bg-[#2a2a2a] border border-gray-600 rounded-md flex items-center justify-center">
-                                  <span className="text-xs font-medium text-gray-400">
-                                    {citation.page}
-                                  </span>
+                                {/* Page Number Badge */}
+                                <div className="flex-shrink-0">
+                                  <div className="w-6 h-6 bg-[#2a2a2a] border border-gray-600 rounded-md flex items-center justify-center">
+                                    <span className="text-xs font-medium text-gray-400">
+                                      {citation.page}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-              </div>
-            ))}
+                    )}
+                </div>
+              );
+            })}
 
             {/* Streaming Message */}
             {isStreaming && streamingMessage && (

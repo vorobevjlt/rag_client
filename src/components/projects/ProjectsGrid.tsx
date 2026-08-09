@@ -32,9 +32,9 @@ export function ProjectsGrid({
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* Header */}
       <div className="border-b border-gray-800/50 bg-[#0f0f0f]/95 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6">
           {/* Top Row */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-5 flex items-center justify-between sm:mb-6">
             <div>
               <h1 className="text-2xl font-medium text-white tracking-tight">
                 Projects
@@ -55,7 +55,7 @@ export function ProjectsGrid({
           </div>
 
           {/* Controls Row */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search
@@ -104,7 +104,7 @@ export function ProjectsGrid({
 
       {/* Error Display */}
       {error && (
-        <div className="max-w-7xl mx-auto px-6 pt-6">
+        <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6">
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
             <span className="text-red-400 text-sm">{error}</span>
           </div>
@@ -112,7 +112,7 @@ export function ProjectsGrid({
       )}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         {projects.length === 0 ? (
           <div className="text-center py-20">
             {searchQuery ? (

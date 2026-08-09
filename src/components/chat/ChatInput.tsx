@@ -27,7 +27,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-gray-800 bg-[#1a1a1a] px-6 py-4">
+    <div className="border-t border-gray-800 bg-[#1a1a1a] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4">
       <div className="max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="relative">
           <div className="relative flex items-end bg-[#252525] border border-gray-700 rounded-lg hover:border-gray-600 focus-within:border-gray-600 transition-colors">
@@ -67,8 +67,8 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
           </div>
 
           {/* Hint Text */}
-          <div className="flex items-center justify-between mt-3 px-2">
-            <p className="text-xs text-gray-500">
+          <div className="mt-3 flex items-center justify-between px-2">
+            <p className="hidden text-xs text-gray-500 sm:block">
               Press{" "}
               <kbd className="px-1 py-0.5 bg-[#252525] border border-gray-700 rounded text-gray-400 text-xs">
                 Enter

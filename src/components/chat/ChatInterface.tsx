@@ -59,12 +59,12 @@ export function ChatInterface({
   };
 
   return (
-    <div className="h-screen bg-[#0d1117] p-4">
-      <div className="flex flex-col h-full bg-[#1a1a1a] text-white rounded-xl overflow-hidden">
+    <div className="h-[calc(100dvh-3.5rem)] bg-[#0d1117] p-0 md:h-screen md:p-4">
+      <div className="flex h-full flex-col overflow-hidden bg-[#1a1a1a] text-white md:rounded-xl">
         {/* Header */}
         {projectId && (
           <div className="border-b border-gray-800 bg-[#1a1a1a] sticky top-0 z-10">
-            <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="mx-auto max-w-4xl px-4 py-3 sm:px-6 sm:py-4">
               <div className="flex items-center gap-3">
                 {/* Chat Icon */}
                 <div className="w-7 h-7 bg-[#252525] border border-gray-700 rounded-lg flex items-center justify-center">
@@ -117,7 +117,7 @@ export function ChatInterface({
               </h2>
               <p className="text-gray-400 mb-8 leading-relaxed">
                 I can help you analyze your documents, answer questions, and
-                provide insights based on your project's knowledge base.
+                provide insights based on your project&apos;s knowledge base.
               </p>
 
               {/* Features List */}

@@ -19,6 +19,41 @@ interface FileDetailsModalProps {
   onClose: () => void;
 }
 
+interface ProcessingDetails {
+  error?: { message?: string };
+  partitioning?: {
+    elements_found?: {
+      text: number;
+      tables: number;
+      images: number;
+      titles: number;
+      other: number;
+    };
+  };
+  chunking?: { total_chunks: number };
+  summarising?: { current_chunk: number; total_chunks: number };
+}
+
+interface ApiDocumentChunk {
+  id: string;
+  type: string[];
+  content: string;
+  original_content: Record<string, unknown>;
+  page_number: number | null;
+  chunk_index: number;
+  char_count: number;
+}
+
+interface DocumentChunk {
+  id: string;
+  type: string[];
+  content: string;
+  original_content: Record<string, unknown>;
+  page: number | null;
+  chunkIndex: number;
+  chars: number;
+}
+
 const PIPELINE_STEPS = [
   {
     id: "uploading",
@@ -29,6 +64,11 @@ const PIPELINE_STEPS = [
     id: "queued",
     name: "Queued",
     description: "File queued for processing",
+  },
+  {
+    id: "processing",
+    name: "Starting",
+    description: "Preparing the document processing job",
   },
   {
     id: "partitioning",
@@ -58,19 +98,38 @@ const PIPELINE_STEPS = [
 ];
 
 export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<string>("uploading");
+  const [selectedTab, setSelectedTab] = useState<string | null>(null);
   const { getToken, userId } = useAuth();
 
-  const [selectedChunk, setSelectedChunk] = useState<any>(null);
-  const [chunks, setChunks] = useState<any[]>([]);
-  const [chunksLoading, setChunksLoading] = useState(false);
+  const [selectedChunk, setSelectedChunk] = useState<DocumentChunk | null>(null);
+  const [chunks, setChunks] = useState<DocumentChunk[] | null>(null);
 
-  const currentStatus = document.processing_status || "uploading";
+  const currentStatus =
+    document.processing_status === "pending"
+      ? "uploading"
+      : document.processing_status || "uploading";
   const isProcessingComplete = currentStatus === "completed";
-  const processingDetails = document?.processing_details as any;
-  const currentStep = PIPELINE_STEPS.find((s) => s.id === activeTab);
+  const isProcessingFailed = currentStatus === "failed";
+  const processingDetails = document.processing_details as ProcessingDetails;
+  const failureMessage =
+    processingDetails?.error?.message ||
+    "Processing failed. Retry the document from the Sources list.";
+  const visiblePipelineSteps = isProcessingFailed
+    ? [
+        ...PIPELINE_STEPS,
+        {
+          id: "failed",
+          name: "Failed",
+          description: failureMessage,
+        },
+      ]
+    : PIPELINE_STEPS;
+  const activeTab = selectedTab ?? currentStatus;
+  const currentStep = visiblePipelineSteps.find((s) => s.id === activeTab);
+  const chunksLoading = isProcessingComplete && chunks === null;
 
   const getStepStatus = (stepId: string) => {
+    if (stepId === "failed" && isProcessingFailed) return "failed";
     const currentPos = PIPELINE_STEPS.findIndex(
       (step) => step.id === currentStatus
     );
@@ -82,51 +141,41 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
     return "pending";
   };
 
-  // Load chunks when document processing is complete
-  const loadChunks = async () => {
-    if (!document?.project_id || !document?.id || !userId) return;
-
-    const token = await getToken();
-
-    try {
-      setChunksLoading(true);
-      const result = await apiClient.get(
-        `/api/projects/${document.project_id}/files/${document.id}/chunks`,
-        token
-      );
-
-      const chunks = result.data.map((chunk: any) => ({
-        id: chunk.id,
-        type: chunk.type,
-        content: chunk.content,
-        original_content: chunk.original_content,
-        page: chunk.page_number,
-        chunkIndex: chunk.chunk_index,
-        chars: chunk.char_count,
-      }));
-
-      setChunks(chunks);
-    } catch (error) {
-      console.error("Error loading chunks:", error);
-      setChunks([]);
-    } finally {
-      setChunksLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (isProcessingComplete) {
-      loadChunks();
-    }
-  }, [isProcessingComplete, document?.id]);
+    if (!isProcessingComplete || !userId) return;
+    let cancelled = false;
 
-  useEffect(() => {
-    if (document) {
-      setActiveTab(currentStatus);
-      setSelectedChunk(null);
-      setChunks([]);
-    }
-  }, [document?.id]);
+    getToken()
+      .then((token) =>
+        apiClient.get(
+          `/api/projects/${document.project_id}/files/${document.id}/chunks`,
+          token
+        )
+      )
+      .then((result) => {
+        if (cancelled) return;
+        setChunks(
+          (result.data as ApiDocumentChunk[]).map((chunk) => ({
+            id: chunk.id,
+            type: chunk.type,
+            content: chunk.content,
+            original_content: chunk.original_content,
+            page: chunk.page_number,
+            chunkIndex: chunk.chunk_index,
+            chars: chunk.char_count,
+          }))
+        );
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Error loading chunks:", error);
+        setChunks([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document.id, document.project_id, getToken, isProcessingComplete, userId]);
 
   return (
     <Modal onClose={onClose}>
@@ -134,14 +183,14 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
 
       <PipelineTabs
         activeTab={activeTab}
-        onTabChange={setActiveTab}
-        tabs={PIPELINE_STEPS.map((step) => ({
+        onTabChange={setSelectedTab}
+        tabs={visiblePipelineSteps.map((step) => ({
           id: step.id,
           name: step.name,
           enabled:
             step.id === "completed"
               ? isProcessingComplete
-              : getStepStatus(step.id) !== "pending",
+              : step.id === "failed" || getStepStatus(step.id) !== "pending",
           icon: <div></div>,
         }))}
       />
@@ -152,7 +201,7 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
           {/* Show Chunks Viewer if completed */}
           {activeTab === "completed" && isProcessingComplete && (
             <ChunksViewer
-              chunks={chunks}
+              chunks={chunks ?? []}
               chunksLoading={chunksLoading}
               selectedChunk={selectedChunk}
               onSelectChunk={setSelectedChunk}
@@ -172,7 +221,7 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
             <ChunkingStep
               status={getStepStatus("chunking")}
               chunkingData={processingDetails?.chunking}
-              chunks={chunks}
+              chunks={chunks ?? []}
               partitioningData={processingDetails?.partitioning}
             />
           )}
@@ -192,7 +241,9 @@ export function FileDetailsModal({ document, onClose }: FileDetailsModalProps) {
             <GenericStep
               stepName={currentStep?.name || "Processing"}
               description={currentStep?.description || "Processing step"}
-              status={getStepStatus(activeTab)}
+              status={
+                activeTab === "failed" ? "failed" : getStepStatus(activeTab)
+              }
             />
           )}
         </div>

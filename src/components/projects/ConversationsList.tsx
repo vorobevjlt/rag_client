@@ -23,7 +23,7 @@ export function ConversationsList({
   const hasConversations = conversations.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#1a1a1a] rounded-xl overflow-hidden">
+    <div className="flex min-h-[28rem] flex-1 flex-col overflow-hidden rounded-xl bg-[#1a1a1a]">
       {/* Error Display */}
       {error && (
         <div className="p-6 pb-0">
@@ -37,10 +37,10 @@ export function ConversationsList({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
           {/* Project Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-medium text-gray-100 mb-1">
                 {project.name}
@@ -53,7 +53,7 @@ export function ConversationsList({
             <button
               onClick={onCreateNewChat}
               disabled={loading}
-              className="bg-white hover:bg-gray-100 disabled:bg-gray-600 disabled:text-gray-400 text-black px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors font-medium text-sm"
+              className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-100 disabled:bg-gray-600 disabled:text-gray-400 sm:justify-start"
             >
               {loading ? (
                 <>

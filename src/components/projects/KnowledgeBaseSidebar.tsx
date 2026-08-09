@@ -1,6 +1,6 @@
 "use client";
 
-import { useDropzone } from "react-dropzone";
+import { FileRejection, useDropzone } from "react-dropzone";
 import {
   FileText,
   Settings,
@@ -14,9 +14,16 @@ import {
   Loader2,
   Trash2,
   Info,
+  X,
+  RotateCcw,
 } from "lucide-react";
-import { ProjectSettings, ProjectDocument } from "@/src/lib/types";
+import {
+  ProjectSettings,
+  ProjectDocument,
+  UploadQueueItem,
+} from "@/src/lib/types";
 import { JSX, useState } from "react";
+import toast from "react-hot-toast";
 
 // Constants
 const STRATEGY_OPTIONS = [
@@ -128,7 +135,9 @@ const documentUtils = {
   getStatusText: (status: string) => {
     const texts: { [key: string]: string } = {
       uploading: "Uploading",
+      pending: "Waiting for upload",
       queued: "Queued",
+      processing: "Starting",
       partitioning: "Processing",
       chunking: "Chunking",
       summarising: "Summarising",
@@ -222,7 +231,12 @@ interface KnowledgeBaseSidebarProps {
   onSetActiveTab: (tab: "documents" | "settings") => void;
   projectDocuments: ProjectDocument[];
   onDocumentUpload: (docs: File[]) => Promise<void>;
+  uploadQueue: UploadQueueItem[];
+  onCancelUpload: (uploadId: string) => void;
+  onRetryUpload: (uploadId: string) => Promise<void>;
+  onDismissUpload: (uploadId: string) => void;
   onDocumentDelete: (docId: string) => Promise<void>;
+  onDocumentRetry: (docId: string) => Promise<void>;
   onOpenDocument: (docId: string) => void;
   onUrlAdd: (url: string) => Promise<void>;
   projectSettings: ProjectSettings | null;
@@ -237,7 +251,12 @@ export function KnowledgeBaseSidebar({
   onSetActiveTab,
   projectDocuments,
   onDocumentUpload,
+  uploadQueue,
+  onCancelUpload,
+  onRetryUpload,
+  onDismissUpload,
   onDocumentDelete,
+  onDocumentRetry,
   onOpenDocument,
   onUrlAdd,
   projectSettings,
@@ -249,8 +268,22 @@ export function KnowledgeBaseSidebar({
   const [urlInput, setUrlInput] = useState("");
   const [isAddingUrl, setIsAddingUrl] = useState(false);
 
+  const handleRejectedFiles = (rejections: FileRejection[]) => {
+    for (const rejection of rejections) {
+      const reasons = rejection.errors.map((error) => {
+        if (error.code === "file-too-large") return "exceeds the 50 MB limit";
+        if (error.code === "file-invalid-type") {
+          return "must be a PDF, DOCX, PPTX, MD, or TXT file";
+        }
+        return error.message;
+      });
+      toast.error(`${rejection.file.name}: ${reasons.join("; ")}`);
+    }
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: onDocumentUpload,
+    onDropAccepted: onDocumentUpload,
+    onDropRejected: handleRejectedFiles,
     accept: {
       "application/pdf": [".pdf"],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -312,7 +345,7 @@ export function KnowledgeBaseSidebar({
   const isEmbeddingLocked = projectDocuments.length > 0;
 
   return (
-    <div className="w-80 bg-[#1a1a1a] border border-gray-700 h-full flex flex-col rounded-xl">
+    <div className="flex min-h-[34rem] w-full flex-col rounded-xl border border-gray-700 bg-[#1a1a1a] md:h-full md:w-80">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
@@ -408,11 +441,112 @@ export function KnowledgeBaseSidebar({
                     <p className="text-xs text-gray-400 mt-1">
                       {isDragActive
                         ? "Release to upload"
-                        : "PDF, DOCX, PPT, MD, TXT • Max 50GB"}
+                        : "PDF, DOCX, PPTX, MD, TXT • Max 50 MB"}
                     </p>
                   </div>
                 </div>
               </div>
+
+              {uploadQueue.length > 0 && (
+                <div className="space-y-2" aria-live="polite">
+                  {uploadQueue.map((upload) => {
+                    const canCancel = [
+                      "waiting",
+                      "preparing",
+                      "uploading",
+                    ].includes(upload.status);
+                    const canRetry = ["failed", "cancelled"].includes(
+                      upload.status
+                    );
+                    const canDismiss = [
+                      "failed",
+                      "cancelled",
+                      "completed",
+                    ].includes(upload.status);
+                    const statusLabel = {
+                      waiting: "Waiting",
+                      preparing: "Preparing",
+                      uploading: `Uploading ${upload.progress}%`,
+                      confirming: "Verifying",
+                      completed: "Uploaded",
+                      failed: "Failed",
+                      cancelled: "Cancelled",
+                    }[upload.status];
+
+                    return (
+                      <div
+                        key={upload.id}
+                        className="rounded-lg border border-gray-700 bg-[#202020] p-3"
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate text-xs font-medium text-gray-200">
+                                {upload.filename}
+                              </span>
+                              <span className="shrink-0 text-xs text-gray-400">
+                                {statusLabel}
+                              </span>
+                            </div>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-700">
+                              <div
+                                className={`h-full rounded-full transition-[width] ${
+                                  upload.status === "failed"
+                                    ? "bg-red-400"
+                                    : upload.status === "completed"
+                                    ? "bg-green-400"
+                                    : "bg-blue-400"
+                                }`}
+                                style={{ width: `${upload.progress}%` }}
+                              />
+                            </div>
+                            {upload.error && (
+                              <p className="mt-2 text-xs text-red-300">
+                                {upload.error}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {canCancel && (
+                              <button
+                                type="button"
+                                onClick={() => onCancelUpload(upload.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+                                title="Cancel upload"
+                                aria-label={`Cancel ${upload.filename} upload`}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                            {canRetry && (
+                              <button
+                                type="button"
+                                onClick={() => onRetryUpload(upload.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+                                title="Retry upload"
+                                aria-label={`Retry ${upload.filename} upload`}
+                              >
+                                <RotateCcw size={14} />
+                              </button>
+                            )}
+                            {canDismiss && (
+                              <button
+                                type="button"
+                                onClick={() => onDismissUpload(upload.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+                                title="Dismiss"
+                                aria-label={`Dismiss ${upload.filename}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* URL Input */}
               <div className="flex items-center gap-3">
@@ -502,16 +636,36 @@ export function KnowledgeBaseSidebar({
                               <h4 className="text-sm font-medium text-gray-200 truncate group-hover:text-white transition-colors">
                                 {documentUtils.getDisplayName(doc)}
                               </h4>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDocumentDelete(doc.id);
-                                }}
-                                className="p-1 text-gray-500 hover:text-gray-300 hover:bg-[#2a2a2a] rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                                title="Delete source"
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                              <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                                {doc.processing_status === "failed" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDocumentRetry(doc.id);
+                                    }}
+                                    className="p-1 text-gray-500 hover:text-gray-300 hover:bg-[#2a2a2a] rounded transition-colors cursor-pointer"
+                                    title="Retry processing"
+                                    aria-label={`Retry processing ${documentUtils.getDisplayName(
+                                      doc
+                                    )}`}
+                                  >
+                                    <RotateCcw size={12} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDocumentDelete(doc.id);
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-gray-300 hover:bg-[#2a2a2a] rounded transition-colors cursor-pointer"
+                                  title="Delete source"
+                                  aria-label={`Delete ${documentUtils.getDisplayName(
+                                    doc
+                                  )}`}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             </div>
                             <div className="flex items-center justify-between mt-1">
                               <div className="flex items-center gap-2 text-xs text-gray-500">

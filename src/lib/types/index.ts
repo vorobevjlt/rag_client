@@ -62,3 +62,24 @@ export interface Project {
     source_url?: string;
     processing_details: unknown;
   }
+
+  export type UploadQueueStatus =
+    | "waiting"
+    | "preparing"
+    | "uploading"
+    | "confirming"
+    | "completed"
+    | "failed"
+    | "cancelled";
+
+  export interface UploadQueueItem {
+    id: string;
+    filename: string;
+    fileSize: number;
+    progress: number;
+    status: UploadQueueStatus;
+    error?: string;
+    retryMode?: "restart" | "confirm";
+    s3Key?: string;
+    documentId?: string;
+  }
